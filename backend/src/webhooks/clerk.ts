@@ -42,7 +42,7 @@ export async function clerkWebhookHandler(req: Request, res: Response) {
         u.username ||
         null;
 
-      const role = parseRole(u.public_metadata?.role);
+      const role = parseRole(u.public_metadata?.role) || "newcomer";
 
       await db
         .insert(users)

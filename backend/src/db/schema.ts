@@ -8,11 +8,19 @@ import {
   date,
   uniqueIndex,
   index,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-export type UserRole = "admin" | "student" | "professor" | "instructor";
-export type AttendanceType = "class" | "duty";
+export const userRoleEnum = pgEnum("user_role", [
+  "admin",
+  "student",
+  "professor",
+  "instructor",
+  "newcomer",
+]);
+
+export const attendanceTypeEnum = pgEnum("attendance_types", ["class", "duty"]);
 
 // Users table
 export const users = pgTable(
@@ -20,7 +28,7 @@ export const users = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     clerkUserId: text("clerk_user_id").notNull().unique(),
-    role: text("role").$type<UserRole>().notNull().default("student"),
+    role: userRoleEnum("role").notNull().default("newcomer"),
     email: text("email").notNull(),
     qrCode: text("qr_code"),
     schoolId: text("school_id"),
@@ -28,7 +36,7 @@ export const users = pgTable(
     firstName: text("first_name"),
     middleName: text("middle_name"),
     lastName: text("last_name"),
-    status: boolean("status").notNull().default(true),
+    status: boolean("status").notNull().default(false),
     profileImage: text("profile_image").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -177,8 +185,7 @@ export const studentAttendance = pgTable(
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
-    attendanceType: text("attendance_type")
-      .$type<AttendanceType>()
+    attendanceType: attendanceTypeEnum("attendance_type")
       .notNull()
       .default("class"),
     timeIn: timestamp("time_in", { withTimezone: true }).notNull(),
@@ -275,3 +282,6 @@ export const dutiesRelations = relations(duties, ({ one }) => ({
     references: [instructorInfo.id],
   }),
 }));
+
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
+export type AttendanceType = (typeof attendanceTypeEnum.enumValues)[number];
