@@ -1,10 +1,11 @@
 import type { UserRole } from "../db/schema.js";
 
 const VALID: readonly UserRole[] = [
-  "professor",
-  "student",
   "admin",
+  "student",
+  "professor",
   "instructor",
+  "newcomer",
 ];
 
 export function parseRole(value: unknown) {
@@ -14,7 +15,7 @@ export function parseRole(value: unknown) {
   ) {
     return value as UserRole;
   }
-  return "user";
+  return "newcomer";
 }
 
 export function isAdmin(role: UserRole) {
