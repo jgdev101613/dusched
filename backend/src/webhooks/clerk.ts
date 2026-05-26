@@ -11,31 +11,29 @@ export async function clerkWebhookHandler(req: Request, res: Response) {
 
   try {
     if (!env.CLERK_WEBHOOK_SECRET) {
-      res.status(503).send("Webhooks secret missing");
+      res.status(503).json({ error: "Webhook secret missing" });
       return;
     }
 
-    const payload =
-      req.body instanceof Buffer
-        ? req.body.toString("utf-8")
-        : String(req.body);
+    if (!Buffer.isBuffer(req.body)) {
+      res.status(400).json({
+        error: "Webhook body must be raw Buffer. Check express.raw().",
+      });
+      return;
+    }
 
-    const request = new Request("https://internal/webhooks/clerk", {
-      method: "POST",
-      headers: new Headers(req.headers as HeadersInit),
-      body: payload,
-    });
-
-    const evt = await verifyWebhook(request, {
+    const evt = await verifyWebhook(req as unknown as globalThis.Request, {
       signingSecret: env.CLERK_WEBHOOK_SECRET,
     });
 
-    if (evt.type === "user.created" || evt.type == "user.updated") {
+    if (evt.type === "user.created" || evt.type === "user.updated") {
       const u = evt.data;
 
       const email =
         u.email_addresses?.find((e) => e.id === u.primary_email_address_id)
-          ?.email_address ?? u.email_addresses?.[0]?.email_address;
+          ?.email_address ??
+        u.email_addresses?.[0]?.email_address ??
+        "";
 
       const displayName =
         [u.first_name, u.last_name].filter(Boolean).join(" ") ||
@@ -48,18 +46,30 @@ export async function clerkWebhookHandler(req: Request, res: Response) {
         .insert(users)
         .values({
           clerkUserId: u.id,
-          email: email ?? "",
+          email,
           displayName,
+          firstName: u.first_name ?? null,
+          lastName: u.last_name ?? null,
+          profileImage: u.image_url ?? "",
           role: role as any,
         })
         .onConflictDoUpdate({
           target: users.clerkUserId,
-          set: { email, displayName, role: role as any, updatedAt: new Date() },
+          set: {
+            email,
+            displayName,
+            firstName: u.first_name ?? null,
+            lastName: u.last_name ?? null,
+            profileImage: u.image_url ?? "",
+            role: role as any,
+            updatedAt: new Date(),
+          },
         });
     }
 
     if (evt.type === "user.deleted") {
       const id = evt.data.id;
+
       if (id) {
         await db.delete(users).where(eq(users.clerkUserId, id));
       }
