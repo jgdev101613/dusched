@@ -134,7 +134,7 @@ export const instructorInfo = pgTable(
 // Groups table
 export const groups = pgTable("groups", {
   id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
+  name: text("name").unique().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

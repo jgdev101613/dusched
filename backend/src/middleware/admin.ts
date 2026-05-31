@@ -11,7 +11,7 @@ export async function requireAdmin(
   try {
     const { userId, isAuthenticated } = getAuth(req);
     if (!isAuthenticated || !userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Unauthorized", isAuthenticated, userId });
       return;
     }
     const user = await getLocalUser(userId);
